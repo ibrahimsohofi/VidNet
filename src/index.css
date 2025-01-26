@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.nav-item{
+    @apply h-full items-center justify-center flex  hover:bg-gray-700  hover:bg-opacity-50 w-32 hover:text-white  font-mono;
+
+}
+@layer base {
+    input:-webkit-autofill, 
+    textarea:-webkit-autofill {
+      background-color: white !important;
+      -webkit-box-shadow: 0 0 0 1000px white inset !important;
+      box-shadow: 0 0 0 1000px white inset !important;
+    
+    }
+  }
+  

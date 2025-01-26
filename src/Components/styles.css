@@ -1,0 +1,31 @@
+.videoOption {
+  position: relative;
+}
+.videoOption::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 50.5%; /* The width of the border */
+  height: 10rem;
+  border-top-color: #6b7280;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-right-radius: 10px;
+}
+.parallelogram {
+  --p: 90px; /* Controls the slant of the parallelogram */
+
+  height: 400px; /* Fixed height */
+  aspect-ratio: 3 / 2; /* Keeps proportional scaling */
+  clip-path: polygon(var(--p) 0, 100% 0, calc(100% - var(--p)) 100%, 0 100%);
+}
+::-webkit-scrollbar {
+  background-color: #f3f4f6;
+  width: 14px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 1px;
+  background-color: #1f2936;
+}
