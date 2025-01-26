@@ -1,6 +1,7 @@
 {
   "name": "learn-react",
   "version": "0.1.0",
+  "homepage": "https://ibrahimsohofi.github.io/VidNet/",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -36,6 +37,7 @@
     "ytdl-core": "^4.11.5"
   },
   "scripts": {
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
