@@ -1,6 +1,5 @@
 # Use the official Node.js image as a base
 FROM node:16
-
 # Install dependencies required by yt-dlp-exec (including Python)
 RUN apt-get update && apt-get install -y \
   python3 \
