@@ -107,7 +107,7 @@ app.get("/video-info", async (req, res) => {
 
   try {
     // Verify yt-dlp Path
-    const ytDlpPath = path.join(__dirname, "node_modules", "yt-dlp-exec", "bin", "yt-dlp");
+    const ytDlpPath = path.join(__dirname, "node_modules", "yt-dlp-exec", "bin", "yt-dlp.exe");
     if (!fs.existsSync(ytDlpPath)) {
       console.error(`yt-dlp executable not found at: ${ytDlpPath}`);
       return res.status(500).json({ error: `yt-dlp executable not found at: ${ytDlpPath}` });
