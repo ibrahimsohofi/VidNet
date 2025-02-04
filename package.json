@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "npm install && yt-dlp --update",
+    "build": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm install && node index.js",
-    "postinstall": "pip install yt-dlp && npm install yt-dlp-exec"
+    "postinstall": "npm install yt-dlp-exec"
   },
   "keywords": [],
   "author": "",
