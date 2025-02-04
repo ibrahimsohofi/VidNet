@@ -9,10 +9,9 @@ const tough = require("tough-cookie");
 const dotenv = require("dotenv");
 const { spawn } = require("child_process");
 const { pipeline } = require("stream");
-
+const axios = require("axios");
 dotenv.config();
 puppeteer.use(StealthPlugin());
-
 const app = express();
 const PORT = process.env.PORT || 10000;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
@@ -26,41 +25,46 @@ const cookiesFilePath = path.join(__dirname, "cookies.txt");
 
 // ✅ Function to Extract & Save YouTube Cookies in Netscape Format
 const saveYoutubeCookies = async () => {
-  const browser = await puppeteer.launch({ headless: false });
-  const page = await browser.newPage();
-  await page.setUserAgent(
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-  );
+  try {
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    );
 
-  console.log("🔗 Navigating to YouTube...");
-  await page.goto("https://www.youtube.com", { waitUntil: "networkidle2" });
+    console.log("🔗 Navigating to YouTube...");
+    await page.goto("https://www.youtube.com", { waitUntil: "networkidle2" });
 
-  console.log("✅ Login manually if required...");
-  await page.waitForTimeout(15000); // Adjust delay if needed
+    console.log("✅ Login manually if required...");
+    await page.waitForTimeout(15000); // Adjust delay if needed
 
-  console.log("✅ Retrieving cookies...");
-  const cookies = await page.cookies();
-  const cookieJar = new tough.CookieJar();
-  
-  for (const cookie of cookies) {
-    const toughCookie = new tough.Cookie({
-      key: cookie.name,
-      value: cookie.value,
-      domain: cookie.domain.replace(/^\./, ""),
-      path: cookie.path,
-      secure: cookie.secure,
-      httpOnly: cookie.httpOnly,
-      expires: cookie.expires ? new Date(cookie.expires * 1000) : "Infinity",
-    });
-    cookieJar.setCookieSync(toughCookie, `https://${cookie.domain}`);
+    console.log("✅ Retrieving cookies...");
+    const cookies = await page.cookies();
+    const cookieJar = new tough.CookieJar();
+    
+    for (const cookie of cookies) {
+      const toughCookie = new tough.Cookie({
+        key: cookie.name,
+        value: cookie.value,
+        domain: cookie.domain.replace(/^\./, ""),
+        path: cookie.path,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        expires: cookie.expires ? new Date(cookie.expires * 1000) : "Infinity",
+      });
+      cookieJar.setCookieSync(toughCookie, `https://${cookie.domain}`);
+    }
+
+    // ✅ Save Cookies in Netscape Format
+    fs.writeFileSync(cookiesFilePath, cookieJar.serializeSync(), "utf8");
+    console.log(`🍪 Cookies saved to: ${cookiesFilePath}`);
+
+    await browser.close();
+    console.log("🚀 Process completed!");
+  } catch (error) {
+    console.error("Error saving YouTube cookies:", error);
+    throw new Error(`Failed to save YouTube cookies: ${error.message}`);
   }
-
-  // ✅ Save Cookies in Netscape Format
-  fs.writeFileSync(cookiesFilePath, cookieJar.serializeSync(), "utf8");
-  console.log(`🍪 Cookies saved to: ${cookiesFilePath}`);
-
-  await browser.close();
-  console.log("🚀 Process completed!");
 };
 
 // ✅ Validate YouTube URLs
@@ -80,22 +84,42 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// 🔥 **Save Cookies Endpoint**
+app.get("/save-cookies", async (req, res) => {
+  try {
+    console.log("🔄 Saving YouTube cookies...");
+    await saveYoutubeCookies();
+    res.json({ message: "YouTube cookies saved successfully." });
+  } catch (error) {
+    console.error("Error saving YouTube cookies:", error);
+    res.status(500).json({ error: `Failed to save YouTube cookies: ${error.message}` });
+  }
+});
+
 // 🔥 **Get Video Info (Uses Cookies)**
 app.get("/video-info", async (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.status(400).json({ error: "No URL provided" });
+
   if (!isValidUrl(videoUrl)) return res.status(400).json({ error: "Invalid YouTube URL" });
 
   console.log(`Fetching details for: ${videoUrl}`);
 
   try {
-    // ✅ Fetch Video Metadata Using yt-dlp + Cookies
+    // Verify yt-dlp Path
+    const ytDlpPath = path.join(__dirname, "node_modules", "yt-dlp-exec", "bin", "yt-dlp");
+    if (!fs.existsSync(ytDlpPath)) {
+      console.error(`yt-dlp executable not found at: ${ytDlpPath}`);
+      return res.status(500).json({ error: `yt-dlp executable not found at: ${ytDlpPath}` });
+    }
+
+    // Fetch Video Metadata Using yt-dlp + Cookies
     const info = await ytdlp(videoUrl, {
       dumpSingleJson: true,
       noWarnings: true,
       noCallHome: true,
       noCheckCertificate: true,
-      cookies: cookiesFilePath, // ✅ Pass cookies here
+      cookies: cookiesFilePath, // Pass cookies here
     });
 
     const formats = info.formats.map((format) => {
@@ -132,7 +156,13 @@ app.get("/video-info", async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching video info:", err);
-    res.status(500).json({ error: err.message || "Unknown error." });
+    if (err.message.includes("yt-dlp executable not found")) {
+      res.status(500).json({ error: err.message });
+    } else if (err.message.includes("Cookies")) {
+      res.status(500).json({ error: "Cookie-related error. Please check your cookie setup." });
+    } else {
+      res.status(500).json({ error: "Unexpected error occurred. Please try again later." });
+    }
   }
 });
 
@@ -150,10 +180,11 @@ app.get("/download", (req, res) => {
   const format = `bestvideo[height<=${quality}]+bestaudio`;
 
   // ✅ Use yt-dlp with cookies
-  const ytDlpProcess = spawn("yt-dlp", [
+  const ytDlpPath = path.join(__dirname, "node_modules", "yt-dlp-exec", "bin", "yt-dlp");
+  const ytDlpProcess = spawn(ytDlpPath, [
     "-f", format,
     "--merge-output-format", extension,
-    "--cookies", cookiesFilePath, // ✅ Ensure cookies are passed
+    "--cookies", cookiesFilePath, // Ensure cookies are passed
     url,
   ]);
 
