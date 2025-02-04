@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "npm install && npm install yt-dlp-exec",
+    "build": "npx bin-version-check-cli python3 '>=3.9' && npm install",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm install && node index.js",
     "postinstall": "npm install yt-dlp-exec"
+    
   },
   "keywords": [],
   "author": "",
